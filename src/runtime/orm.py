@@ -1,9 +1,8 @@
 import csv
-from dataclasses import field
 import os
 from pathlib import Path
 import subprocess
-from typing import Generic, Optional, TypeVar, Type, List
+from typing import Optional, TypeVar, Type, List
 import uuid
 
 from src.runtime.query import Query
@@ -38,46 +37,12 @@ class CsvOrm:
         if obj[key] == new_row[key]:
           raise Exception(f"El campo {key} debe ser unico")
 
-  # Actualiza un registro del csv por medio de su id
-  def update(self, filter_field: str, filter_value):
-    objs = self.all()
-    fields = self.get_attributes()
-    file_csv = self.get_csv()
-    rows: list[dict] = []
-
-    for obj in objs:
-      if obj[filter_field] == filter_value:
-        # El campo field es dinamico, no se esta creando un objeto con un campo llamado "fiedl"
-        rows.append({field: getattr(self, field) or getattr(obj, field) for field in fields})
-      else: rows.append(vars(obj))
-
-    with open(file_csv, mode="w", newline="", encoding="utf-8") as file:
-      writer = csv.DictWriter(file, fieldnames=fields)
-      writer.writeheader()
-      writer.writerows(rows)
-
-  def drop(self, filter_field: str, filter_value):
-    objs = self.all()
-    fields = self.get_attributes()
-    file_csv = self.get_csv()
-    rows: list[dict] = []
-
-    for obj in objs:
-      if obj[filter_field] == filter_value: continue
-      else: rows.append(vars(obj))
-
-    with open(file_csv, mode="w", newline="", encoding="utf-8") as file:
-      writer = csv.DictWriter(file, fieldnames=fields)
-      writer.writeheader()
-      writer.writerows(rows)
-
   @classmethod
   def all (cls: Type[T]) -> List[T]:
     if not cls.csv_exists():
       return []
 
     return Query(cls, cls.get_csv()).all()
-
 
   @classmethod
   def __create_csv (cls: Type[T]) -> bool:
@@ -127,15 +92,6 @@ class CsvOrm:
       cls.check_uniques(row)
       writer.writerow(row)
 
-
-  def find_by (self, **fields):
-    results = []
-
-    for obj in self.all():
-      if all(str(getattr(obj, k)) == str(v) for k, v in fields.items()):
-        results.append(obj)
-
-    return results
 
   def __getitem__(self, key):
     return getattr(self, key)

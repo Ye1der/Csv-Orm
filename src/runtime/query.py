@@ -1,4 +1,5 @@
 import csv
+import os
 from typing import TYPE_CHECKING, Generic, Type, TypeVar, Self
 import uuid
 
@@ -18,12 +19,6 @@ class Query(Generic[T]):
   def __init__(self, model: Type[T], path_csv: str):
     self.__model = model
     self.__path_csv = path_csv
-
-  def __method_order_by (self):
-    pass
-
-  def __method_filter_where (self):
-    pass
 
   def where (self, **filters: object) -> Self:
     self.__filters = filters
@@ -55,16 +50,17 @@ class Query(Generic[T]):
       return objs
 
   def set_filters(self) -> list[T]:
-    rows = self.get_all()
     filtered_rows = []
 
     if hasattr(self, "_Query__filters") and len(self.__filters) > 0:
       attributes_filter = self.__filters.keys()
-      for row in rows:
-        for attr in attributes_filter:
-          if row[attr] == self.__filters[attr]:
-            filtered_rows.append(row)
-    else: filtered_rows = rows
+      with open(self.__path_csv, 'r', encoding='utf-8') as infile:
+        reader = csv.DictReader(infile)
+        for row in reader:
+          for attr in attributes_filter:
+            if row[attr] == self.__filters[attr]:
+              filtered_rows.append(row)
+    else: filtered_rows = self.get_all()
 
     if hasattr(self, "_Query__offset"): filtered_rows = filtered_rows[self.__offset:]
     if hasattr(self, "_Query__limit"): filtered_rows = filtered_rows[:self.__limit]
@@ -101,32 +97,34 @@ class Query(Generic[T]):
     return len(self.set_filters())
 
   def delete(self) -> int:
-    rows = self.get_all()
     rows_filtered = self.set_filters()
-
     ids_to_detele = [row["id"] for row in rows_filtered]
-    rows = list(filter(lambda x: x["id"] not in ids_to_detele ,rows))
-    rows = [vars(row) for row in rows]
-
     fields = ["id", *self.__model.get_attributes()]
-    with open(self.__path_csv, mode="w", newline="", encoding="utf-8") as file:
-      writer = csv.DictWriter(file, fieldnames=fields)
-      writer.writeheader()
-      writer.writerows(rows)
 
+    temp_path = self.__path_csv + ".tmp"
+    with open(self.__path_csv, mode="r", newline="", encoding="utf-8") as infile, \
+         open(temp_path, mode="w", newline="", encoding="utf-8") as outfile:
+
+      reader = csv.DictReader(infile)
+      writer = csv.DictWriter(outfile, fieldnames=fields)
+      writer.writeheader()
+
+      for row in reader:
+        if row["id"] in ids_to_detele: continue
+        else: writer.writerow(row)
+
+    os.replace(temp_path, self.__path_csv)
     return len(rows_filtered)
 
   def update(self, **updates: object) -> int:
     if not updates:
       raise ValueError("No se proporcionaron campos para actualizar")
 
-    rows = self.get_all()
     rows_filtered = self.set_filters()
     rows_afected = len(rows_filtered)
 
     if rows_afected == 0: return 0
 
-    # ids_to_update = [row["id"] for row in rows_filtered]
     rows_updated = []
 
     for row in rows_filtered:
@@ -134,13 +132,19 @@ class Query(Generic[T]):
         row[key] = value
       rows_updated.append(row)
 
-    dict_rows_updated: dict[str, object] = {row["id"]:row for row in rows_updated}
-    rows = [dict_rows_updated.get(row["id"], row) for row in rows]
+    dict_id_rows_updated = {row["id"]:row for row in rows_updated}
 
     fields = ["id", *self.__model.get_attributes()]
-    with open(self.__path_csv, mode="w", newline="", encoding="utf-8") as file:
-      writer = csv.DictWriter(file, fieldnames=fields)
-      writer.writeheader()
-      writer.writerows([vars(row) for row in rows])
+    temp_path = self.__path_csv + ".tmp"
+    with open(self.__path_csv, mode="r", newline="", encoding="utf-8") as infile, \
+         open(temp_path, mode="w", newline="", encoding="utf-8") as outfile:
 
+      reader = csv.DictReader(infile)
+      writer = csv.DictWriter(outfile, fieldnames=fields)
+      writer.writeheader()
+
+      for row in reader:
+        writer.writerow(dict_id_rows_updated.get(row["id"], row))
+
+    os.replace(temp_path, self.__path_csv)
     return rows_afected
