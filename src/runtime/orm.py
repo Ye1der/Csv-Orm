@@ -1,6 +1,7 @@
 import csv
 from dataclasses import field
 import os
+from pathlib import Path
 import subprocess
 from typing import Generic, Optional, TypeVar, Type, List
 import uuid
@@ -10,7 +11,7 @@ from src.runtime.query import Query
 T = TypeVar('T', bound='CsvOrm')
 
 class CsvOrm:
-  __id: uuid.UUID
+  id: uuid.UUID
 
   # Obtiene los nombres de los atributos de la clase -> ["edad", "nombre"]
   @classmethod
@@ -28,38 +29,18 @@ class CsvOrm:
   def csv_exists (cls):
     return os.path.exists(cls.get_csv())
 
-  def check_uniques (self):
-    uniques: list[str] = self["__uniques__"]
-    objs = self.get_all()
-
+  @classmethod
+  def check_uniques(cls: Type[T], new_row: dict):
+    uniques: list[str] = getattr(cls, "__uniques__")
+    objs = cls.all()
     for obj in objs:
       for key in uniques:
-        if obj[key] == self[key]: raise Exception(f"El campo {key} debe ser unico")
-
-  # Guarda los datos que tiene la clase como un nuevo registro en el csv
-  def save (self):
-    file_exists = self.csv_exists()
-    file_csv = self.get_csv()
-    fields = self.get_attributes()
-
-    with open(file_csv, mode="a", newline="", encoding="utf-8") as file:
-      # Le pasa los header que debe tener el csv en base a los fields de la clase y con eso crea el writer
-      writer = csv.DictWriter(file, fieldnames=["id", *fields])
-
-      if not file_exists:
-        # Si el csv no habia sido creado antes, se crean los headers del mismo
-        writer.writeheader()
-
-      self.check_uniques()
-
-      self.__id = uuid.uuid4()
-      obj = {field: getattr(self, field) for field in fields}
-      obj["id"] = self.__id
-      writer.writerow(obj)
+        if obj[key] == new_row[key]:
+          raise Exception(f"El campo {key} debe ser unico")
 
   # Actualiza un registro del csv por medio de su id
   def update(self, filter_field: str, filter_value):
-    objs = self.get_all()
+    objs = self.all()
     fields = self.get_attributes()
     file_csv = self.get_csv()
     rows: list[dict] = []
@@ -76,7 +57,7 @@ class CsvOrm:
       writer.writerows(rows)
 
   def drop(self, filter_field: str, filter_value):
-    objs = self.get_all()
+    objs = self.all()
     fields = self.get_attributes()
     file_csv = self.get_csv()
     rows: list[dict] = []
@@ -91,33 +72,66 @@ class CsvOrm:
       writer.writerows(rows)
 
   @classmethod
-  def get_all (cls: Type[T]) -> List[T]:
+  def all (cls: Type[T]) -> List[T]:
     if not cls.csv_exists():
       return []
 
-    file_csv = cls.get_csv()
-    with open(file_csv, mode="r", encoding="utf-8") as file:
-      reader = csv.DictReader(file)
-      objs = []
+    return Query(cls, cls.get_csv()).all()
 
-      for row in reader:
-        id = row.pop("id")
-        obj = cls(**row)
-        obj.__id = uuid.UUID(id)
-        objs.append(obj)
-        print("id:", obj.__id)
 
-      return objs
+  @classmethod
+  def __create_csv (cls: Type[T]) -> bool:
+    if not cls.csv_exists():
+      file_csv = cls.get_csv()
+      fields = cls.get_attributes()
+
+      # Creamos todas las carpetas de la ruta por si no existen
+      Path(file_csv).parent.mkdir(parents=True, exist_ok=True)
+
+      with open(file_csv, mode="a", newline="", encoding="utf-8") as file:
+        # Le pasa los header que debe tener el csv en base a los fields de la clase y con eso crea el writer
+        csv.DictWriter(file, fieldnames=["id", *fields]).writeheader()
+
+      return True
+    return False
 
   @classmethod
   def where (cls: Type[T], **filters: object) -> Query[T]:
-    query: Query[T] = Query()
+    cls.__create_csv()
+    query: Query[T] = Query(cls, cls.get_csv())
     return query.where(**filters)
+
+  @classmethod
+  def create(cls: Type[T], obj: Optional[T] = None, **fields_obj: object):
+    file_exists = cls.csv_exists()
+    file_csv = cls.get_csv()
+    fields = cls.get_attributes()
+
+    # Creamos todas las carpetas de la ruta por si no existen
+    Path(file_csv).parent.mkdir(parents=True, exist_ok=True)
+
+    # Abrimos o creamos el archivo csv
+    with open(file_csv, mode="a", newline="", encoding="utf-8") as file:
+      # Le pasa los header que debe tener el csv en base a los fields de la clase y con eso crea el writer
+      writer = csv.DictWriter(file, fieldnames=["id", *fields])
+
+      if not file_exists:
+        writer.writeheader()
+
+      row: dict[str, object]
+
+      if obj: row = vars(obj)
+      else: row = {field: fields_obj[field] or None for field in fields}
+
+      row["id"] = uuid.uuid4()
+      cls.check_uniques(row)
+      writer.writerow(row)
+
 
   def find_by (self, **fields):
     results = []
 
-    for obj in self.get_all():
+    for obj in self.all():
       if all(str(getattr(obj, k)) == str(v) for k, v in fields.items()):
         results.append(obj)
 
@@ -125,3 +139,6 @@ class CsvOrm:
 
   def __getitem__(self, key):
     return getattr(self, key)
+
+  def __setitem__(self, key, value):
+    setattr(self, key, value)

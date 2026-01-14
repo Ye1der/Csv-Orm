@@ -1,3 +1,5 @@
 from models.car import Car
 
-Car.where()
+car = Car.where(color="rojo").update(color="red")
+
+print(car)
