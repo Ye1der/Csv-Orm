@@ -1,4 +1,4 @@
-from typing import TypeVar, overload, Unpack, TYPE_CHECKING, Literal, Generic, Self
+from typing import TypeVar, overload, Unpack, Literal, Generic, Self
 
 T = TypeVar('T', bound=object)
 
@@ -14,7 +14,7 @@ class Query(Generic[T]):
 
   def update(self, **values: object) -> int: ...
 
-  def order_by(self, attribute: list[str]) -> 'Query[T]': ...
+  def order_by(self, attribute: Literal["id", "age", "name"]) -> 'Query[T]': ...
 
   def __init__(self, model: type[T], path_csv: str) -> None: ...
 

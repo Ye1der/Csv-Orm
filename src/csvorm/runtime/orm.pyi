@@ -1,4 +1,6 @@
-from typing import Type, TypeVar, overload, Unpack, TYPE_CHECKING, Optional
+# type: ignore
+
+from typing import Type, TypeVar, overload, Unpack, Optional
 import uuid
 from csvorm import Query
 
@@ -8,9 +10,11 @@ class CsvOrm:
   id: uuid.UUID
 
   @classmethod
+  @overload
   def where(cls: Type[T], **filters: object) -> Query[T]: ...
 
   @classmethod
+  @overload
   def create(cls: Type[T], **fields_obj: object) -> None: ...
 
   @classmethod
