@@ -32,7 +32,7 @@ class CsvOrm:
 
   @classmethod
   def check_uniques(cls: Type[T], new_row: dict):
-    uniques: list[str] = getattr(cls, "__uniques__")
+    uniques: list[str] = getattr(cls, "__uniques__", [])
     objs = cls.all()
     for obj in objs:
       for key in uniques:

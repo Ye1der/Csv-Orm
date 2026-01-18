@@ -1,42 +1,20 @@
-# type: ignore
-
 from typing import TypeVar, overload, Unpack, TYPE_CHECKING, Literal, Generic, Self
-from csvorm.generated.filters import CarWhere, UserWhere
-
-if TYPE_CHECKING:
-    from models.car import Car
-    from models.user import User
-
 
 T = TypeVar('T', bound=object)
 
 class Query(Generic[T]):
-
   __model: type[T]
   __path_csv: str
   __limit: int | None
   __offset: int | None
   __order_by: str | None
   __filters: dict[str, object] | None
-    
-  @overload
-  def where(self, **filters: Unpack[CarWhere]) -> 'Query[Car]': ...
 
-  @overload
-  def where(self, **filters: Unpack[UserWhere]) -> 'Query[User]': ...
+  def where(self, **filters: object) -> 'Query[T]': ...
 
-  @overload
-  def update(self, **values: Unpack[CarWhere]) -> int: ...
+  def update(self, **values: object) -> int: ...
 
-  @overload
-  def update(self, **values: Unpack[UserWhere]) -> int: ...
-
-  @overload
-  def order_by(self, attribute: Literal["id", "marca", "velocidad", "puertas", "precio", "placa", "color"]) -> 'Query[Car]': ...
-
-  @overload
-  def order_by(self, attribute: Literal["id", "cedula", "name", "age"]) -> 'Query[User]': ...
-
+  def order_by(self, attribute: list[str]) -> 'Query[T]': ...
 
   def __init__(self, model: type[T], path_csv: str) -> None: ...
 
@@ -57,4 +35,3 @@ class Query(Generic[T]):
   def count(self) -> int: ...
 
   def delete(self) -> int: ...
-      
