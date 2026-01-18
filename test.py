@@ -1,3 +1,8 @@
-from models.car import Car
+from models.user import User
 
-print(Car.where(color="azul").all())
+
+User.create(
+  age=20,
+  cedula=2023,
+  name="Yeider",
+)

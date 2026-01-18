@@ -2,10 +2,12 @@ import csv
 import os
 from pathlib import Path
 import subprocess
-from typing import Optional, TypeVar, Type, List
+from typing import Any, Optional, TypeVar, Type, List
 import uuid
 
-from src.runtime.query import Query
+from csvorm.runtime.query import Query
+from csvorm.tooling.config import CsvOrmConfig
+from csvorm.tooling.get_root_user import get_root
 
 T = TypeVar('T', bound='CsvOrm')
 
@@ -20,8 +22,8 @@ class CsvOrm:
   # Obtiene la ruta del csv de esa clase -> "data/students.csv"
   @classmethod
   def get_csv (cls) -> str:
-    root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('utf-8').strip()
-    return f"{root}/data/{cls.__name__.lower()}.csv"
+    root = get_root()
+    return f"{root}/data_csv/{cls.__name__.lower()}.csv"
 
   # Verifica si la clase ya tiene un archivo csv creado -> ture/false
   @classmethod
@@ -61,10 +63,10 @@ class CsvOrm:
     return False
 
   @classmethod
-  def where (cls: Type[T], **filters: object) -> Query[T]:
+  def where (cls: Type[T], **filters: Any) -> Query[T]:
     cls.__create_csv()
     query: Query[T] = Query(cls, cls.get_csv())
-    return query.where(**filters)
+    return query.where(**filters) # type: ignore
 
   @classmethod
   def create(cls: Type[T], obj: Optional[T] = None, **fields_obj: object):

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.runtime.orm import CsvOrm
+from csvorm import CsvOrm
 
 @dataclass
 class Car (CsvOrm):

@@ -1,0 +1,6 @@
+[project]
+models = "models"
+generated = ".csvorm/generated"
+
+[python]
+pythonpath = ["."]

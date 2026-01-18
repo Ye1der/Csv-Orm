@@ -3,11 +3,11 @@ import os
 from typing import TYPE_CHECKING, Generic, Type, TypeVar, Self
 import uuid
 
-T = TypeVar('T', bound=object)
-
 if TYPE_CHECKING:
-  from src.runtime.orm import CsvOrm
+  from csvorm.runtime.orm import CsvOrm
   T = TypeVar('T', bound=CsvOrm)
+else:
+  T = TypeVar('T', bound=object)
 
 class Query(Generic[T]):
   __limit: int
