@@ -1,10 +1,40 @@
 [project]
 name = "csvorm"
 version = "0.1.0"
-description = "Add your description here"
+description = "ORM model-first y fuertemente tipado para Python con backend CSV y arquitectura extensible"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+authors = [
+    { name = "Yeider Peña" }
+]
+
+keywords = [
+    "orm",
+    "csv",
+    "database",
+    "model-first",
+    "typed",
+    "python",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
     "watchdog>=6.0.0",
 ]
 
